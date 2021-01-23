@@ -1,21 +1,18 @@
-from tkinter import *
-import re
-import os
-import warnings
-import serial
-import serial.tools.list_ports
-import time
-import re
-import getpass
+from tkinter import *                                                      // GUI framework for python
+import re                                                                        // for using regular expressions
+import os                                                                       // for configuring the hardware
+import warnings                                                           // for displaying warnins
+import serial                                                                 // for setting up serial commuinication
+import serial.tools.list_ports                                        // for differentiating between the ports
+import time                                                                  // for using delay
+import getpass                                                              // for password
+from PIL import Image, ImageTk                               // for image processing
 
-from PIL import Image, ImageTk
-
-
-arduino_ports = [
+arduino_ports = [                                                         // check the ports available
     p.device
     for p in serial.tools.list_ports.comports()
     if re.search(r'ttyACM.','ttyACM0').group() or re.search(r'ttyS.','ttyS0').group()
-]
+]                                                                                      // identify the ports used by arduino
 if not arduino_ports:
     raise IOError("No Arduino found")
     print(" ")
@@ -24,41 +21,38 @@ if len(arduino_ports) > 1:
 
 print("Please Enter Your Computer's Password (it is neccessary for giving permission to the board):")
 
-sudoPassword = "tjinthejungle"
+sudoPassword = “      “           
 
-
-command = 'sudo chmod 666 '+arduino_ports[0]
+command = 'sudo chmod 666  '+arduino_ports[0]                                // configuring arduino
 os.system('echo %s|sudo -S %s' % (sudoPassword, command))
-
-
-
-arduino = serial.Serial(arduino_ports[0],9600)
+arduino = serial.Serial(arduino_ports[0],9600)                               // setting baud rate for serial  
+                                                                                                            //communication
 print(arduino)
-
 servo_position = 0
-
-def isPendown(servo_position):
+def isPendown(servo_position):                                                         // check if pen is down
     if(servo_position == 0):
         return True
     else:
         return False
 
-
-def isPenup(servo_position):
+ 
+def isPenup(servo_position):                                                              // check if pen is up
     if(servo_position == 90):
         return True
     else:
         return False
-
+// function to lower the pen
 def pen_down():
     global servo_position
     time.sleep(1)
-    go="D"
-    arduino.write(go.encode())
+    go="D"                                                                                          // prepare command for the
+                                                                                                          // harware
+    arduino.write(go.encode())                                                         // send  command to arduino
     time.sleep(2)
     servo_position=0
     print("pen down")
 
+// function to lift the pen
 def pen_up():
     global servo_position
     time.sleep(1)
@@ -69,7 +63,7 @@ def pen_up():
     print("pen up")
     
 
-
+                                                       // function for fixing the resolution of initial and final point
 def fixRes(x,a):
     for n in range(len(a)):
         if(x> a[0] and x < a[len(a)-1]):
@@ -86,7 +80,10 @@ def fixRes(x,a):
                 x=a[len(a)-1]
 
     return x 
+  
 
+                                                                                          // function to convert G code length 
+                                                                                                          //component into integer
 def toInt(x):
 
     if(float(x) < 1 or float(x)< (-1)):
@@ -97,7 +94,7 @@ def toInt(x):
         else:
             x= int(0)
 
-
+ 
     else :
         for i in range(-50,50):
             if (float(x)>i and float(x)<i+1):
@@ -107,6 +104,7 @@ def toInt(x):
     return x            
 
 
+                                                                                        // functions for movement of axes
 def movement(xi,yi,xf,yf):
     if(xi == xf and yi != yf):
          moveY(yi,yf)
@@ -217,100 +215,82 @@ def moveRight(steps):
     print("right here")
     time.sleep(5)
 
-
-
-
-
-
 def moveLeft(steps):
-    time.sleep(1)
-    
+    time.sleep(1)    
     if((steps/20)<10):
         go="XN"+"0"+str(int(steps/20))
     else:
         go="XN"+str(int(steps/20))
-        
-    print(go)
     arduino.write(go.encode())
     print("left here")    
     time.sleep(5)
 
 
 
-
-
-
-
-
-
+// programming for GUI components
 
 
 # Here, we are creating our class, Window, and inheriting from the Frame
 # class. Frame is a class from the tkinter module. (see Lib/tkinter/__init__)
 class Window(Frame):
-    # number of displacements
-    disp_count=0
+    disp_count=0                                                                                # number of displacements
     i=0
     j=0
-    # Stores current drawing tool used
-    drawing_tool = "line"
-    
-    # Tracks whether left mouse is down
-    left_but = "up"
-    
-    # x and y positions for drawing with pencil
-    x_pos, y_pos = None, None
+    drawing_tool = "line"                                                        # Stores current drawing tool used
+    left_but = "up"                                                               # Tracks whether left mouse is down  
+    x_pos, y_pos = None, None                                          # x and y positions for drawing
+                                                                                          # with pencil
     x_points=[]
     y_points=[]
-    # Tracks x & y when the mouse is clicked and released
+                                                                                          # Tracks x & y when the mouse is
+                                                                                          # clicked and released
     x1_line_pt, y1_line_pt, x2_line_pt, y2_line_pt = None, None, None, None
     coordinates=[[None for _ in range(4)] for _ in range(50)]
-    
-
-    # Define settings upon initialization. Here you can specify
+   
+                                                                                          # Define settings upon initialization.
     def __init__(self, master=None):
         
         # parameters that you want to send through the Frame class. 
         Frame.__init__(self, master)   
 
-        #reference to the master widget, which is the tk window                 
-        self.master = master
-        
-        #with that, we want to then run init_window, which doesn't yet exist
+                                                                                       # reference to the master widget,
+                                                                                       # which is the tk window                 
+         self.master = master
+       
         self.init_window()
-
         self.g_code= [ [None for _ in range(5)]for _ in range(100)]
-    #Creation of init_window
-    def init_window(self):
-        
-        # changing the title of our master widget      
-        self.master.title("Tarun2.0 - The PCB Designer")
+    
+    def init_window(self):                                                       #Creation of init_window
+                                                               
+       
+        self.master.title("Tarun2.0 - The PCB Designer")          # changing the title of
+                                                                                                # our master widget      
 
         # allowing the widget to take the full space of the root window
+
         self.pack()
 
-        # creating a menu instance
-        menu = Menu(self.master)
+        
+        menu = Menu(self.master)                                              # creating a menu instance
         self.master.config(menu=menu)
 
-        # create the file object)
-        file = Menu(menu)
+      
+        file = Menu(menu)                                                           # create the file object)
         file.add_command(label="Open", command=self.__openFile)
         file.add_command(label="New", command=self.__newFile)
 
         # adds a command to the menu option, calling it exit, and the
         # command it runs on event is client_exit
+
         file.add_command(label="Exit", command=self.client_exit)
 
-        
-        #added "file" to our menu
-        menu.add_cascade(label="File", menu=file)
-
-        # create the file object)
-        edit = Menu(menu)
+       
+        menu.add_cascade(label="File", menu=file)                 # added "file" to our menu
+        edit = Menu(menu)                                                        # create the file object)
 
         # adds a command to the menu option, calling it exit, and the
         # command it runs on event is client_exit
+
         edit.add_command(label="Undo")
 
         #added "file" to our menu
@@ -320,6 +300,9 @@ class Window(Frame):
         about.add_command(label="Application", command=self.__showAbout)
         menu.add_cascade(label="About", menu=about)
 
+        self.box=Frame(root)
+        self.box.pack()
+       
         self.box1=Frame(root)
         self.box1.pack()
                         
@@ -347,19 +330,20 @@ class Window(Frame):
         drawing_area.bind("<ButtonRelease-1>", self.left_but_up)
 
 
+
+                                                                                                    // Puts dots on canvas
+
         for x in range(10,360,20):
             for y in range (10,360,20):
                 drawing_area.create_rectangle(x-1, y-1, x + 1, y + 1,fill="midnight blue")
                 self.x_points.append(x)
                 self.y_points.append(y)
-                #print("x = " + str(x) + " and y = " + str(y) + "  ", end=" ")
-
-            #print("\n")    
-
+   
         self.btn2 = Button(self.drawing_frame,text='Run', command=self.run_grid).pack()   
 
     
-        
+                                                                                 // function for opening the G code File
+     
     def __openFile(self):
         root=self.master
         self.drawing_frame.pack_forget()
@@ -375,7 +359,7 @@ class Window(Frame):
             frame = Frame(self.box2)
             frame.pack()
             load = Image.open(filename)
-            #resizing width
+                                                                                            #resizing height and width of image
             new_width  = 360
             new_height = 360
             load = load.resize((new_width, new_height), Image.ANTIALIAS)
@@ -403,9 +387,7 @@ class Window(Frame):
                     else:
                         self.coordinates[0][1] = i/1000
                     n=n+1    
-                    #print(i)
-
-            print(self.coordinates[0][1]) 
+             
             btn_image = Button(frame,text='Run', command=self.__run_image).pack()       
         
             
@@ -424,31 +406,22 @@ class Window(Frame):
                             r_string_and_num_unsigned = re.compile("([a-zA-Z]+)([0.0-9.9]+)").match(s[item])
                             r_string_and_num_signed = re.compile("([a-zA-Z]+)([-+]+)([0.0-9.9]+)").match(s[item])
                             if r_string_and_num_unsigned:
-                                #print(r_string_and_num_unsigned.groups())
-                                T.insert(INSERT,r_string_and_num_unsigned.groups())
+                               T.insert(INSERT,r_string_and_num_unsigned.groups())
                                 T.insert(INSERT," ")
                                 self.g_code[i][item]=r_string_and_num_unsigned.groups()
                             elif r_string_and_num_signed:
-                                #print(r_string_and_num_signed.groups())
                                 T.insert(INSERT,r_string_and_num_signed.groups())
-                                # T.configure(text=r_string_and_num_signed.groups())
-                                # T.insert(,r_string_and_num_signed.groups())
                                 T.insert(INSERT," ")
                                 self.g_code[i][item]=r_string_and_num_signed.groups()
-
-                            
-
                     except:
                         pass
-
-                
                 
                     i=i+1   
                     T.insert(INSERT, "\n")  
 
             btn_gcode = Button(root,text='Run', command=self.__run_gcode).pack()       
-                
-                
+   
+     // Function to decode the G Code file           
     def __run_gcode(self):
         j=0
         command=list()
@@ -465,24 +438,20 @@ class Window(Frame):
                         else:
                            
                             command.append(-1*toInt(self.g_code[row][col][2]))
-        
+                            
         for i in range(len(command)):
             if command[i] == 'X':
                 if command[i+1] !=0:
                     if command[i+3] != 0:
-                        move_diagonal(5*command[i+1],5*command[i+3])
+                        move_diagonal(command[i+1],command[i+3])
                     else:
-                        moveX(0,5*command[i+1])
+                        moveX(command[i+1])
                 elif command[i+1] == 0:
                     if command[i+3] != 0:
-                        moveY(0,5*command[i+3])
+                        moveY(command[i+3])
                         
            
-
-    def __run_image(self):
-        print(self.coordinates[0][0])
-        print(self.coordinates[0][1])
-        moveX(self.coordinates[0][0] , self.coordinates[0][1])
+                          
 
            
     def __newFile(self): 
@@ -490,8 +459,8 @@ class Window(Frame):
         self.__file = None
         self.box.pack_forget()
         self.init_window()
-
-    def __increase_X(self):
+        
+  def __increase_X(self):
         go="XP"+"0"+str(int(5))
         arduino.write(go.encode())
         time.sleep(1)
@@ -512,14 +481,13 @@ class Window(Frame):
         time.sleep(1)
         
     def __increase_Z(self):
-        arduino.write("U".encode())
+        arduino.write("u".encode())
         time.sleep(1)
       
     def __decrease_Z(self):
-        arduino.write("D".encode())
+        arduino.write("d".encode())
         time.sleep(1)
         
-
     def __showAbout(self): 
         messagebox.showinfo("Tarun2.0","Tarun Thakur")
 
@@ -536,7 +504,7 @@ class Window(Frame):
   
         self.coordinates[self.i][0]= self.x1_line_pt
         self.coordinates[self.i][1]= self.y1_line_pt
-        #event.widget.create_rectangle(self.x1_line_pt, self.y1_line_pt, self.x1_line_pt + 5, self.y1_line_pt + 5,fill="midnight blue")   
+        
         print("x1 = " + str(self.x1_line_pt)+"\n y1 = "+str(self.y1_line_pt))
 
     # ---------- CATCH MOUSE UP ----------
@@ -559,11 +527,10 @@ class Window(Frame):
         self.coordinates[self.i][2]= self.x2_line_pt
         self.coordinates[self.i][3]= self.y2_line_pt
         self.i = self.i + 1
-        #event.widget.create_rectangle(self.x2_line_pt, self.y2_line_pt, self.x2_line_pt + 5, self.y2_line_pt + 5,fill="midnight blue")
         print("x2 = " + str(self.x2_line_pt)+"\n y2 = "+str(self.y2_line_pt))
          
-        # If mouse is released and line tool is selected
-        # draw the line
+                                                                            # If mouse is released and line tool is selected
+                                                                            # draw the line
         if self.drawing_tool == "line":
             self.line_draw(event)
 
@@ -652,10 +619,4 @@ app = Window(root)
 
 #mainloop 
 root.mainloop()  
-
-
-
-
-
-
 
